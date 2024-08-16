@@ -1,27 +1,31 @@
-name: Tests
+name: CI
 
 concurrency:
   cancel-in-progress: true
-  group: ${{github.workflow}}-${{github.ref}}
+  group: ${{ github.workflow }}-${{ github.ref }}
 
 on:
   push:
-    branches: [main, "release/**"]
+    branches:
+      - main
+      - "release/**"
   pull_request:
-    branches: [main, "release/**"]
+    branches:
+      - main
+      - "release/**"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test:
-    name: test ${{ matrix.rust }} ${{ matrix.flags }}
+    name: Test on Rust ${{ matrix.rust }} with flags ${{ matrix.flags }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        rust: ["stable", "beta", "nightly"]
+        rust: [stable, beta, nightly]
         flags: ["--no-default-features", "", "--all-features"]
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +36,7 @@ jobs:
       - run: cargo test --workspace ${{ matrix.flags }}
 
   test-no-std:
-    name: test no_std
+    name: Test no_std
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -43,48 +47,40 @@ jobs:
       - run: cargo check --target riscv32imac-unknown-none-elf --no-default-features
 
   check-no-default-features:
-    name: check no-default-features
+    name: Check no-default-features
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          cd crates/revm
-          cargo check --no-default-features
+      - run: cargo check --no-default-features --manifest-path crates/revm/Cargo.toml
 
   check-serde:
-    name: check serde
+    name: Check with serde feature
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          cd crates/revm
-          cargo check --no-default-features --features serde
+      - run: cargo check --no-default-features --features serde --manifest-path crates/revm/Cargo.toml
 
   check-std:
-    name: check std
+    name: Check with std feature
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          cd crates/revm
-          cargo check --no-default-features --features std
+      - run: cargo check --no-default-features --features std --manifest-path crates/revm/Cargo.toml
 
   clippy:
-    name: clippy
+    name: Clippy Lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo clippy --workspace --all-targets --all-features
-        env:
-          RUSTFLAGS: -Dwarnings
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   docs:
-    name: docs
+    name: Generate Documentation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -97,7 +93,7 @@ jobs:
           RUSTDOCFLAGS: "--cfg docsrs -D warnings"
 
   fmt:
-    name: fmt
+    name: Code Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
