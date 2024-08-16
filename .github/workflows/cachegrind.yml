@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup | Rust
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Valgrind
@@ -21,30 +21,36 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
 
-      - name: Run Valgrind
+      - name: Build with Cargo
         run: |
-          cargo b -r -p revm-test --bin snailtracer
+          cargo build --release --package revm-test --bin snailtracer
+
+      - name: Run Valgrind Cachegrind
+        run: |
           valgrind --tool=cachegrind target/release/snailtracer 2>&1 | tee cachegrind_results.txt
 
-      - name: Valgrind results
-        id: valgrind_results
+      - name: Process Valgrind results
+        id: process_valgrind_results
         run: |
-          contents=$(printf "%s" "$(head -c 64000 cachegrind_results.txt)")
-          # dump line by line into a file
-          printf "Valgrind Results:\n\n\`\`\`\n%s\n\`\`\`" "$contents" > results.md
+          # Capture the first 64,000 characters of the Valgrind output
+          contents=$(head -c 64000 cachegrind_results.txt)
+          # Write the formatted results to a markdown file
+          echo -e "Valgrind Results:\n\n\`\`\`\n${contents}\n\`\`\`" > results.md
 
-      - name: Comment on PR
+      - name: Comment on Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Try to edit the last comment
-          if gh pr comment ${{ github.event.pull_request.number }} --edit-last --body-file results.md; then
-            echo "Successfully edited last comment."
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          COMMENT_BODY_FILE="results.md"
+
+          # Attempt to edit the last comment; if it fails, post a new comment
+          if gh pr comment $PR_NUMBER --edit-last --body-file $COMMENT_BODY_FILE; then
+            echo "Successfully edited the last comment."
           else
-            echo "Failed to edit last comment. Trying to add a new comment instead!"
-            # If editing last comment fails, try to add a new comment
-            if ! gh pr comment ${{ github.event.pull_request.number }} --body-file results.md; then
-              echo "Comment failed to be made, printing out results here:"
-              cat results.md
+            echo "Failed to edit the last comment. Attempting to add a new comment."
+            if ! gh pr comment $PR_NUMBER --body-file $COMMENT_BODY_FILE; then
+              echo "Failed to comment. Outputting results to the log."
+              cat $COMMENT_BODY_FILE
             fi
           fi
