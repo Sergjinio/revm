@@ -1,27 +1,31 @@
-name: Tests
+name: CI Tests
 
 concurrency:
   cancel-in-progress: true
-  group: ${{github.workflow}}-${{github.ref}}
+  group: ${{ github.workflow }}-${{ github.ref }}
 
 on:
   push:
-    branches: [main, "release/**"]
+    branches:
+      - main
+      - "release/**"
   pull_request:
-    branches: [main, "release/**"]
+    branches:
+      - main
+      - "release/**"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test:
-    name: test ${{ matrix.rust }} ${{ matrix.flags }}
+    name: Test with Rust ${{ matrix.rust }} and flags ${{ matrix.flags }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        rust: ["stable", "beta", "nightly"]
+        rust: [stable, beta, nightly]
         flags: ["--no-default-features", "", "--all-features"]
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +36,7 @@ jobs:
       - run: cargo test --workspace ${{ matrix.flags }}
 
   test-no-std:
-    name: test no_std
+    name: Test no_std
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -43,7 +47,7 @@ jobs:
       - run: cargo check --target riscv32imac-unknown-none-elf --no-default-features
 
   check-no-default-features:
-    name: check no-default-features
+    name: Check no-default-features
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -53,7 +57,7 @@ jobs:
           cargo check --no-default-features
 
   check-serde:
-    name: check serde
+    name: Check serde feature
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -63,7 +67,7 @@ jobs:
           cargo check --no-default-features --features serde
 
   check-std:
-    name: check std
+    name: Check std feature
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -73,7 +77,7 @@ jobs:
           cargo check --no-default-features --features std
 
   clippy:
-    name: clippy
+    name: Run Clippy
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -84,7 +88,7 @@ jobs:
           RUSTFLAGS: -Dwarnings
 
   docs:
-    name: docs
+    name: Build Documentation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -94,10 +98,10 @@ jobs:
           components: rust-docs
       - run: cargo doc --workspace --all-features --no-deps --document-private-items
         env:
-          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+          RUSTDOCFLAGS: "--cfg docsrs -Dwarnings"
 
   fmt:
-    name: fmt
+    name: Check Code Formatting
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
